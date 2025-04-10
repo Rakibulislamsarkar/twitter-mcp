@@ -1,0 +1,39 @@
+{
+  "name": "twitter-mcp",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "build/index.js",
+  "bin": {
+    "twitter-server": "./build/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node build/index.js",
+    "prepublish": "npm run build"
+    
+  },
+  "keywords": [
+    "mcp",
+    "modelcontextprotocol",
+    "server",
+    "twitter",
+    "claude"
+  ],
+  "author": "Rakibul Islam Sarkar",
+  "license": "ISC",
+  "description": "A Model Context Protocol server allows to interact with Twitter, enabling posting tweets and searching Twitter.",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "0.6.0",
+    "dotenv": "^16.4.7",
+    "twitter-api-v2": "^1.18.2",
+    "zod": "^3.24.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.24",
+    "typescript": "^5.3.3"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Rakibulislamsarkar/twitter-mcp.git"
+  }
+}
