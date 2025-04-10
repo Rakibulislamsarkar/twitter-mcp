@@ -31,7 +31,7 @@ This MCP server allows Clients to interact with Twitter, enabling posting tweets
 }
 ```
 
-3. Restart Claude Desktop(Simply closing and opening the Claude desktop app wont work, you habe to go the files and then press the exit option)
+3. Restart Claude Desktop (Simply closing and reopening the Claude desktop app won’t work — you need to go to the files and click the exit option instead.)
 
 That's it! Claude can now interact with Twitter through two tools:
 
