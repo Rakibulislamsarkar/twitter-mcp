@@ -51,3 +51,36 @@ export interface Tweet {
   metrics: TweetMetrics;
   createdAt: string;
 }
+
+export interface FormattedTweet {
+  position: number;
+  author: {
+    username: string;
+  };
+  content: string;
+  metrics: TweetMetrics;
+  url: string;
+}
+
+export interface SearchResponse {
+  query: string;
+  count: number;
+  tweets: FormattedTweet[];
+}
+
+export class TwitterError extends Error {
+  constructor(
+    message: string,
+    public readonly code: string,
+    public readonly status?: number
+  ) {
+    super(message);
+    this.name = "TwitterError";
+  }
+
+  static isRateLimit(error: unknown): error is TwitterError {
+    return (
+      error instanceof TwitterError && error.code === "rate_limit_exceeded"
+    );
+  }
+}
