@@ -14,6 +14,13 @@ export const PostTweetSchema = z.object({
     .string()
     .min(1, "Tweet text cannot be empty")
     .max(500, "Tweet cannot exceed 500 characters"),
+  // image: z
+  //   .string()
+  //   .optional()
+  //   .refine(
+  //     (value) => !value || value.startsWith("data:image/"),
+  //     "Image must be a valid base64-encoded-string"
+  //   ),
 });
 
 export type PostTweetArgs = z.infer<typeof PostTweetSchema>;
