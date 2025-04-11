@@ -11,64 +11,50 @@ import {
 import { TwitterClient } from './twitter-api.js';
 import { ResponseFormatter } from './formatter.js';
 import {
-  Config,
-  ConfigSchema,
-  PostTweetSchema,
-  SearchTweetsSchema,
+  Config, ConfigSchema,
+  PostTweetSchema, SearchTweetsSchema,
   TwitterError
 } from './types.js';
 import dotenv from 'dotenv';
 
-function loadConfig(): Config {
-  dotenv.config();
-
-  const config = {
-    apiKey: process.env.API_KEY,
-    apiSecretKey: process.env.API_SECRET_KEY,
-    accessToken: process.env.ACCESS_TOKEN,
-    accessTokenSecret: process.env.ACCESS_TOKEN_SECRET
-  };
-
-  const validationResult = ConfigSchema.safeParse(config);
-  if (!validationResult.success) {
-    console.error('Configuration validation failed:', validationResult.error.message);
-    process.exit(1);
-  }
-
-  return validationResult.data;
-}
-
-class TwitterServer {
+export class TwitterServer {
   private server: Server;
   private client: TwitterClient;
 
-  constructor(private config: Config) {
-    this.client = new TwitterClient(this.config);
-    this.server = new Server(
-      { name: 'twitter-mcp', version: '0.1.0' },
-      { capabilities: { tools: {} } }
-    );
-    this.setup();
+  constructor(config: Config) {
+    const result = ConfigSchema.safeParse(config);
+    if (!result.success) {
+      throw new Error(`Invalid configuration: ${result.error.message}`);
+    }
+
+    this.client = new TwitterClient(config);
+    this.server = new Server({
+      name: 'twitter-mcp',
+      version: '0.1.0'
+    }, {
+      capabilities: {
+        tools: {}
+      }
+    });
+
+    this.setupHandlers();
   }
 
-  private setup(): void {
-    this.registerErrorHandlers();
-    this.registerToolHandlers();
-  }
-
-  private registerErrorHandlers(): void {
+  private setupHandlers(): void {
     this.server.onerror = (error) => {
       console.error('[MCP Error]:', error);
     };
 
     process.on('SIGINT', async () => {
-      console.log('\nShutting down server...');
+      console.error('Shutting down server...');
       await this.server.close();
       process.exit(0);
     });
+
+    this.setupToolHandlers();
   }
 
-  private registerToolHandlers(): void {
+  private setupToolHandlers(): void {
     this.server.setRequestHandler(ListToolsRequestSchema, async () => ({
       tools: [
         {
@@ -109,9 +95,10 @@ class TwitterServer {
       ]
     }));
 
-    this.server.setRequestHandler(CallToolRequestSchema, async ({ params }) => {
-      const { name, arguments: args } = params;
-      console.log(`Executing tool: ${name}`, args);
+
+    this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
+      const { name, arguments: args } = request.params;
+      console.error(`Tool called: ${name}`, args);
 
       try {
         switch (name) {
@@ -120,7 +107,10 @@ class TwitterServer {
           case 'search_tweets':
             return await this.handleSearchTweets(args);
           default:
-            throw new McpError(ErrorCode.MethodNotFound, `Unknown tool: ${name}`);
+            throw new McpError(
+              ErrorCode.MethodNotFound,
+              `Unknown tool: ${name}`
+            );
         }
       } catch (error) {
         return this.handleError(error);
@@ -128,40 +118,40 @@ class TwitterServer {
     });
   }
 
-  private async handlePostTweet(args: unknown): Promise<{ content: TextContent[] }> {
-    const validationResult = PostTweetSchema.safeParse(args);
-    if (!validationResult.success) {
+  private async handlePostTweet(args: unknown) {
+    const result = PostTweetSchema.safeParse(args);
+    if (!result.success) {
       throw new McpError(
         ErrorCode.InvalidParams,
-        `Invalid parameters: ${validationResult.error.message}`
+        `Invalid parameters: ${result.error.message}`
       );
     }
 
-    const tweet = await this.client.postTweet(validationResult.data.text);
+    const tweet = await this.client.postTweet(result.data.text);
     return {
       content: [{
         type: 'text',
         text: `Tweet posted successfully!\nURL: https://twitter.com/status/${tweet.id}`
-      }]
+      }] as TextContent[]
     };
   }
 
-  private async handleSearchTweets(args: unknown): Promise<{ content: TextContent[] }> {
-    const validationResult = SearchTweetsSchema.safeParse(args);
-    if (!validationResult.success) {
+  private async handleSearchTweets(args: unknown) {
+    const result = SearchTweetsSchema.safeParse(args);
+    if (!result.success) {
       throw new McpError(
         ErrorCode.InvalidParams,
-        `Invalid parameters: ${validationResult.error.message}`
+        `Invalid parameters: ${result.error.message}`
       );
     }
 
     const { tweets, users } = await this.client.searchTweets(
-      validationResult.data.query,
-      validationResult.data.count
+      result.data.query,
+      result.data.count
     );
 
     const formattedResponse = ResponseFormatter.formatSearchResponse(
-      validationResult.data.query,
+      result.data.query,
       tweets,
       users
     );
@@ -170,11 +160,11 @@ class TwitterServer {
       content: [{
         type: 'text',
         text: ResponseFormatter.toMcpResponse(formattedResponse)
-      }]
+      }] as TextContent[]
     };
   }
 
-  private handleError(error: unknown): { content: TextContent[] } {
+  private handleError(error: unknown) {
     if (error instanceof McpError) {
       throw error;
     }
@@ -186,7 +176,7 @@ class TwitterServer {
             type: 'text',
             text: 'Rate limit exceeded. Please wait a moment before trying again.',
             isError: true
-          }]
+          }] as TextContent[]
         };
       }
 
@@ -195,29 +185,35 @@ class TwitterServer {
           type: 'text',
           text: `Twitter API error: ${(error as TwitterError).message}`,
           isError: true
-        }]
+        }] as TextContent[]
       };
     }
 
     console.error('Unexpected error:', error);
-    throw new McpError(ErrorCode.InternalError, 'An unexpected error occurred');
+    throw new McpError(
+      ErrorCode.InternalError,
+      'An unexpected error occurred'
+    );
   }
 
   async start(): Promise<void> {
     const transport = new StdioServerTransport();
     await this.server.connect(transport);
-    console.log('Twitter MCP server is running on stdio.');
+    console.error('Twitter MCP server running on stdio');
   }
 }
 
+dotenv.config();
 
-(async () => {
-  try {
-    const config = loadConfig();
-    const server = new TwitterServer(config);
-    await server.start();
-  } catch (error) {
-    console.error('Failed to initialize server:', error);
-    process.exit(1);
-  }
-})();
+const config = {
+  apiKey: process.env.API_KEY!,
+  apiSecretKey: process.env.API_SECRET_KEY!,
+  accessToken: process.env.ACCESS_TOKEN!,
+  accessTokenSecret: process.env.ACCESS_TOKEN_SECRET!
+};
+
+const server = new TwitterServer(config);
+server.start().catch(error => {
+  console.error('Failed to start server:', error);
+  process.exit(1);
+});

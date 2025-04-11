@@ -6,6 +6,10 @@
   "bin": {
     "twitter-server": "./build/index.js"
   },
+  "files": [
+    "build",
+    "README.md"
+  ],
   "scripts": {
     "build": "tsc",
     "start": "node build/index.js",
