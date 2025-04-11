@@ -39,7 +39,7 @@ export interface PostedTweet {
   text: string;
 }
 
-export interface TweetUser {
+export interface TwitterUser {
   id: string;
   username: string;
 }

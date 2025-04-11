@@ -10,7 +10,6 @@
     "build": "tsc",
     "start": "node build/index.js",
     "prepublish": "npm run build"
-    
   },
   "keywords": [
     "mcp",
@@ -25,7 +24,7 @@
   "dependencies": {
     "@modelcontextprotocol/sdk": "0.6.0",
     "dotenv": "^16.4.7",
-    "twitter-api-v2": "^1.18.2",
+    "twitter-api-v2": "^1.22.0",
     "zod": "^3.24.0"
   },
   "devDependencies": {
